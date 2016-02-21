@@ -18,3 +18,4 @@ This project incorporates components from the projects listed below. The origina
 - sstarcher/uchiwa version "latest" (https://github.com/sstarcher/docker-uchiwa)
 - redis version 3.0.7 (https://github.com/antirez/redis/releases/tag/3.0.7)
 - rabbitmq version 3.5 (https://github.com/rabbitmq/rabbitmq-server/releases/tag/rabbitmqi\_v3\_5\_7)
+- CF-Core-OS-Cluster (https://github.com/andypowe11/AWS-Docker-Swarm/blob/master/CF-CoreOS-Cluster-v1.0.json_

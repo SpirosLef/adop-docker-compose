@@ -1,0 +1,130 @@
+# set LOGSTASH_HOST to dns/ip of logstash host
+
+version: '2'
+
+services:
+  proxy:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  ldap:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  gerrit-mysql:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  gerrit:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sensu-uchiwa:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sensu-api:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sensu-server:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sensu-client:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sensu-rabbitmq:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sensu-redis:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sonar-mysql:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  sonar:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  jenkins:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "jenkins"
+      
+  jenkins-slave:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  selenium-hub:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  selenium-node-chrome:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  selenium-node-firefox:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
+  
+  nexus:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"

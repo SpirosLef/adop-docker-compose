@@ -1,0 +1,22 @@
+version: '2'
+
+volumes:
+  nginx_config:
+  nginx_releasenote:
+  ldap_db:
+  ldap_static:
+  gerrit_mysql_data:
+  git_repos:
+  gerrit_review_site:
+  sensu_api_conf:
+  sensu_server_conf:
+  sensu_client_conf:
+  sensu_rabbitmq_data:
+  sensu_redis_data:
+  sonar_mysql_data:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:
+  jenkins_home:
+  nexus_sonatype_work:
+  selenium-config-vol:

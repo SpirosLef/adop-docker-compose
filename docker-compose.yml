@@ -1,13 +1,77 @@
 # set TARGET_HOST to dns/ip of proxy
 # set LOGSTASH_HOST to dns/ip of logstash host
+#
+# TODO:
+#   Multiple -f overides are not working with the network driver
+#   This seems to have been fixed in docker-compose git repo, but not yet released
 
 version: '2'
 
 networks:
   appnet:
-    external: true
+    driver: bridge
+
+volumes:
+  nginx_config:
+  nginx_releasenote:
+  ldap_db:
+  ldap_static:
+  gerrit_mysql_data:
+  git_repos:
+  gerrit_review_site:
+  sensu_api_conf:
+  sensu_server_conf:
+  sensu_client_conf:
+  sensu_rabbitmq_data:
+  sensu_redis_data:
+  sonar_mysql_data:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:
+  jenkins_home:
+  nexus_sonatype_work:
+  selenium-config-vol:
+  elasticsearch_data:
 
 services:
+  elasticsearch:
+    container_name: elasticsearch
+    restart: always
+    image: elasticsearch:2.1.1
+    networks:
+      - appnet
+    command: elasticsearch -Des.network.host=0.0.0.0
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+  
+  logstash:
+    container_name: logstash
+    restart: always
+    image: accenture/adop-logstash:0.1.0
+    networks:
+      - appnet
+    environment:
+      - "constraint:tier==public"
+      - LS_HEAP_SIZE=1024m
+    ports:
+      - "12201:12201/udp"
+      - "25826:25826/udp"
+      - "5000:5000/tcp"
+  
+  kibana:
+    container_name: kibana
+    restart: always
+    image: kibana:4.3.1
+    networks:
+      - appnet
+    command: kibana
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+
   proxy:
     container_name: proxy
     restart: always
@@ -22,6 +86,11 @@ services:
     volumes:
       - nginx_config:/etc/nginx
       - nginx_releasenote:/usr/share/nginx/html
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       - "constraint:tier==public"
       - "LDAP_SERVER=ldap:389"
@@ -45,6 +114,11 @@ services:
     volumes:
       - ldap_db:/var/lib/ldap
       - ldap_static:/etc/ldap
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       SLAPD_PASSWORD: ${LDAP_PWD}
       SLAPD_DOMAIN: ${LDAP_DOMAIN}
@@ -60,6 +134,11 @@ services:
       - "3306"
     volumes:
       - gerrit_mysql_data:/var/lib/mysql
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       MYSQL_ROOT_PASSWORD: "Password01"
       MYSQL_USER: ${GERRIT_MYSQL_USER}
@@ -82,6 +161,11 @@ services:
     volumes:
       - git_repos:/var/git/repos 
       - gerrit_review_site:/var/gerrit/review_site 
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       - "affinity:container==gerrit-mysql"
       - "REPO_PATH=/var/git/repos"
@@ -115,6 +199,11 @@ services:
     image: sstarcher/uchiwa
     networks:
       - appnet
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       SENSU_HOSTNAME: sensu-api
     expose:
@@ -148,6 +237,11 @@ services:
     command: server
     volumes:
       - sensu_server_conf:/etc/sensu/conf.d
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       CLIENT_NAME: core
       API_HOST: sensu-api
@@ -165,6 +259,11 @@ services:
     command: client
     volumes:
       - sensu_client_conf:/etc/sensu/conf.d
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       CLIENT_NAME: core
       RABBITMQ_HOST: sensu-rabbitmq
@@ -184,6 +283,11 @@ services:
       - "15671"
     volumes:
       - sensu_rabbitmq_data:/var/lib/rabbitmq
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
 
   sensu-redis:
     container_name: sensu-redis
@@ -195,6 +299,11 @@ services:
       - "6379"
     volumes:
       - sensu_redis_data:/data
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
 
   sonar-mysql:
     container_name: sonar-mysql
@@ -206,6 +315,11 @@ services:
       - "3306"
     volumes:
       - sonar_mysql_data:/var/lib/mysql 
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment: 
       MYSQL_ROOT_PASSWORD: "sonar"
       MYSQL_USER: ${SONAR_MYSQL_USER}
@@ -226,6 +340,11 @@ services:
       - sonar_data:/opt/sonarqube/data
       - sonar_extensions:/opt/sonarqube/extensions 
       - sonar_logs:/opt/sonarqube/logs
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       - "affinity:container==sonar-mysql"
       - "LDAP_URL=ldap://ldap:389"
@@ -256,6 +375,11 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home 
       - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       JENKINS_OPTS: "--prefix=/jenkins"
       ROOT_URL: "http://${TARGET_HOST}/jenkins/"
@@ -303,6 +427,11 @@ services:
       - appnet
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     privileged: true
     environment:
       SLAVE_LABELS: "aws ldap java8 docker"
@@ -315,6 +444,11 @@ services:
       - appnet
     expose:
       - "4444"
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
 
   selenium-node-chrome:
     container_name: selenium-node-chrome
@@ -324,6 +458,11 @@ services:
       - appnet
     volumes:
       - ./volumes/selenium-config-vol:/var/selenium-config
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       SE_OPTS: "-nodeConfig /var/selenium-config/config-chrome.json"
       HUB_PORT_4444_TCP_ADDR: "selenium-hub"
@@ -337,6 +476,11 @@ services:
       - appnet
     volumes:
       - ./volumes/selenium-config-vol:/var/selenium-config
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       SE_OPTS: "-nodeConfig /var/selenium-config/config-firefox.json"
       HUB_PORT_4444_TCP_ADDR: "selenium-hub"
@@ -352,6 +496,11 @@ services:
       - "8081"
     volumes:
       - nexus_sonatype_work:/sonatype-work
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://${LOGSTASH_HOST}:25826"
+        syslog-tag: "proxy"
     environment:
       NEXUS_BASE_URL: "http://${TARGET_HOST}/nexus"
       LDAP_SEARCH_BASE: "${LDAP_FULL_DOMAIN}"

@@ -1075,9 +1075,9 @@
             "Fn::Join": [
               "",
               [
-                "mkdir -p /content\n",
-                "echo '<HTML><BODY>Hello World!</BODY><HTML>' > /content/index.html\n",
-                "docker run --port 80:80 --name some-nginx -v /content:/usr/share/nginx/html:ro -d nginx\n"
+                "docker run --port 80:80 --name proxy-nginx --add-host target:",
+                { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] },
+                " mcroker/adop-nginx-proxy\n"
               ]
             ]
           }
@@ -1103,7 +1103,7 @@
     },
     "ELBPublicDNSName": {
       "Description": "Pulic URL for the ELB",
-      "Value": { "Fn::Join": [ "", "http://" , "Fn::GetAtt": [ "ProxyElasticLoadBalancer", "DNSName" ] ] }
+      "Value": { "Fn::Join": [ "", [ "http://" , { "Fn::GetAtt": [ "ProxyElasticLoadBalancer", "DNSName" ] } ] ] }
     }
   },
   "Metadata": {

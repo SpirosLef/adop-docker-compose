@@ -503,10 +503,10 @@
         "AWS::CloudFormation::Designer": { "id": "f9f55c48-c23a-41bf-84f7-faba38dfa051" }
       }
     },
-    "NodeProxySecurityGroup": {
+    "ProxySecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Node Swarm SecurityGroup",
+        "GroupDescription": "Proxy SecurityGroup",
         "VpcId": { "Ref": "Vpc" },
         "SecurityGroupIngress": [
           {
@@ -1067,7 +1067,7 @@
         "AssociatePublicIpAddress": true,
         "KeyName": { "Ref": "KeyName" },
         "SecurityGroups": [ {
-            "Ref": "NodeProxySecurityGroup"
+            "Ref": "ProxySecurityGroup"
           }
         ],
         "UserData": {

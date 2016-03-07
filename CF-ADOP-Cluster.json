@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Swarm cluster running swarm",
+  "Description": "ADOP Swarm cluster",
   "Mappings": {
     "VpcCidrs": {
       "eu-central-1": {
@@ -893,7 +893,7 @@
                 "        After=docker.service\n\n",
                 "        [Service]\n",
                 "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run --name docker-swarm -d -p 2375:2375 swarm manage etcd://$",
+                "        ExecStart=/usr/bin/docker run --name docker-swarm-node -d -p 2375:2375 swarm manage etcd://$",
                 {
                   "Ref": "AdvertisedIPAddress"
                 },
@@ -963,18 +963,13 @@
                 },
                 "_ipv4:2380\n",
                 "  units:\n",
-                "    - name: docker-tcp.socket\n",
+                "    - name: docker.service\n",
+                "      drop-ins:\n",
+                "        - name: 10-add-label.conf\n",
+                "          content: |\n",
+                "            [Service]\n",
+                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243 --label tier=public\"\n",
                 "      command: start\n",
-                "      enable: true\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Docker Socket for the API\n\n",
-                "        [Socket]\n",
-                "        ListenStream=4243\n",
-                "        BindIPv6Only=both\n",
-                "        Service=docker.service\n\n",
-                "        [Install]\n",
-                "        WantedBy=sockets.target\n",
                 "    - name: etcd2.service\n",
                 "      command: start\n",
                 "    - name: fleet.service\n",
@@ -987,7 +982,7 @@
                 "        After=docker.service\n\n",
                 "        [Service]\n",
                 "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run --name docker-swarm -d swarm join --addr=$",
+                "        ExecStart=/usr/bin/docker run --name docker-swarm-node -d swarm join --addr=$",
                 {
                   "Ref": "AdvertisedIPAddress"
                 },
@@ -1138,7 +1133,7 @@
                 "      command: start\n",
                 "    - name: fleet.service\n",
                 "      command: start\n",
-                "    - name: docker-swarm.service\n",
+                "    - name: docker-swarm-node.service\n",
                 "      command: start\n",
                 "      content: |\n",
                 "        [Unit]\n",
@@ -1146,7 +1141,7 @@
                 "        After=docker.service\n\n",
                 "        [Service]\n",
                 "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run --name docker-swarm -d swarm join --addr=$",
+                "        ExecStart=/usr/bin/docker run --name docker-swarm-node -d swarm join --addr=$",
                 {
                   "Ref": "AdvertisedIPAddress"
                 },

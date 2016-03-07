@@ -817,6 +817,7 @@
       }
     },
     "MasterSwarmInstance": {
+      "DependsOn": "AttachGateway",
       "Type": "AWS::EC2::Instance",
       "Properties": {
         "AvailabilityZone": {
@@ -911,6 +912,7 @@
       }
     },
     "SwarmNginxInstance": {
+      "DependsOn": "AttachGateway",
       "Type": "AWS::EC2::Instance",
       "Properties": {
         "AvailabilityZone": {
@@ -1160,7 +1162,7 @@
       }
     },
     "ProxyElasticLoadBalancer" : {
-
+      "DependsOn": "AttachGateway",
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "Subnets": [ { "Ref": "ProxyELBSubnetAz1" }, { "Ref": "ProxyELBSubnetAz2" }, { "Ref": "ProxyELBSubnetAz3" }  ],
@@ -1186,6 +1188,7 @@
       }
     },
     "proxyServerAsg": {
+      "DependsOn": "AttachGateway",
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
         "AvailabilityZones": [ { "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "1", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "2", { "Ref": "VpcAvailabilityZones" } ]
@@ -1204,6 +1207,7 @@
       }
     },
     "ProxyServerLc": {
+      "DependsOn": "AttachGateway",
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
         "ImageId": {

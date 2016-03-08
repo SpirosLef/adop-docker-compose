@@ -66,19 +66,19 @@
     },
     "RegionMap": {
       "eu-central-1": {
-        "COREOSAMI": "ami-fdd4c791"
+        "COREOSAMI": "ami-9db652f2"
       },
       "eu-west-1": {
-        "COREOSAMI": "ami-55d20b26"
+        "COREOSAMI": "ami-18bb026b"
       },
       "us-east-1": {
-        "COREOSAMI": "ami-37bdc15d"
+        "COREOSAMI": "ami-38d2ea52"
       },
       "us-west-2": {
-        "COREOSAMI": "ami-00ebfc61"
+        "COREOSAMI": "ami-2b7d914b"
       },
       "us-west-1": {
-        "COREOSAMI": "ami-27553a47"
+        "COREOSAMI": "ami-3d27545d"
       }
     }
   },
@@ -637,6 +637,141 @@
         }
       }
     },
+    "NodeIngress4789": {
+      "DependsOn": "NodeSwarmSecurityGroup",
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "4789",
+        "ToPort": "4789",
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "MasterIngress4789": {
+      "DependsOn": [
+        "MasterSwarmSecurityGroup",
+        "NodeSwarmSecurityGroup"
+      ],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "4789",
+        "ToPort": "4789",
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "MasterSwarmSecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "NodeIngress7946": {
+      "DependsOn": "NodeSwarmSecurityGroup",
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "7946",
+        "ToPort": "7946",
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "MasterIngress7946": {
+      "DependsOn": [
+        "MasterSwarmSecurityGroup",
+        "NodeSwarmSecurityGroup"
+      ],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "7946",
+        "ToPort": "7946",
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "MasterSwarmSecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "NodeIngressudp7946": {
+      "DependsOn": "NodeSwarmSecurityGroup",
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "udp",
+        "FromPort": "7946",
+        "ToPort": "7946",
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "MasterIngressudp7946": {
+      "DependsOn": [
+        "MasterSwarmSecurityGroup",
+        "NodeSwarmSecurityGroup"
+      ],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSwarmSecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "udp",
+        "FromPort": "7946",
+        "ToPort": "7946",
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "MasterSwarmSecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    },
     "NodeIngress4001": {
       "DependsOn": "NodeSwarmSecurityGroup",
       "Type": "AWS::EC2::SecurityGroupIngress",
@@ -824,6 +959,15 @@
           "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" }
           ]
         },
+        "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": 50
+                        }
+                    }
+                ],
         "ImageId": {
           "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "COREOSAMI" ]
         },
@@ -870,18 +1014,13 @@
                 },
                 "_ipv4:2380\n",
                 "  units:\n",
-                "    - name: docker-tcp.socket\n",
+                "    - name: docker.service\n",
+                "      drop-ins:\n",
+                "        - name: 10-add-label.conf\n",
+                "          content: |\n",
+                "            [Service]\n",
+                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243\"\n",
                 "      command: start\n",
-                "      enable: true\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Docker Socket for the API\n\n",
-                "        [Socket]\n",
-                "        ListenStream=4243\n",
-                "        BindIPv6Only=both\n",
-                "        Service=docker.service\n\n",
-                "        [Install]\n",
-                "        WantedBy=sockets.target\n",
                 "    - name: etcd2.service\n",
                 "      command: start\n",
                 "    - name: fleet.service\n",
@@ -919,6 +1058,15 @@
           "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" }
           ]
         },
+        "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": 50
+                        }
+                    }
+                ],
         "ImageId": {
           "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "COREOSAMI" ]
         },
@@ -970,7 +1118,14 @@
                 "        - name: 10-add-label.conf\n",
                 "          content: |\n",
                 "            [Service]\n",
-                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243 --label tier=public\"\n",
+                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243 --cluster-store=etcd://",
+                {
+                  "Fn::GetAtt": [
+                    "MasterSwarmInstance",
+                    "PrivateIp"
+                  ]
+                },
+                ":2379/ --cluster-advertise=eth0:4243 --label tier=public\"\n",
                 "      command: start\n",
                 "    - name: etcd2.service\n",
                 "      command: start\n",
@@ -1068,6 +1223,15 @@
       ],
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
+        "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": 50
+                        }
+                    }
+                ],
         "ImageId": {
           "Fn::FindInMap": [
             "RegionMap",
@@ -1119,18 +1283,19 @@
                 },
                 "_ipv4:2380\n",
                 "  units:\n",
-                "    - name: docker-tcp.socket\n",
-                "      command: start\n",
-                "      enable: true\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Docker Socket for the API\n\n",
-                "        [Socket]\n",
-                "        ListenStream=4243\n",
-                "        BindIPv6Only=both\n",
-                "        Service=docker.service\n\n",
-                "        [Install]\n",
-                "        WantedBy=sockets.target\n",
+                "    - name: docker.service\n",
+                "      drop-ins:\n",
+                "        - name: 10-add-label.conf\n",
+                "          content: |\n",
+                "            [Service]\n",
+                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243 --cluster-store=etcd://",
+                {
+                  "Fn::GetAtt": [
+                    "MasterSwarmInstance",
+                    "PrivateIp"
+                  ]
+                },
+                ":2379/ --cluster-advertise=eth0:4243\"\n",
                 "    - name: etcd2.service\n",
                 "      command: start\n",
                 "    - name: fleet.service\n",
@@ -1210,6 +1375,15 @@
       "DependsOn": "AttachGateway",
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
+        "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "VolumeSize": 50
+                        }
+                    }
+                ],
         "ImageId": {
           "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "COREOSAMI" ]
         },

@@ -1343,13 +1343,13 @@
       "Description": "Command to run a 'docker ps' on the cluster master",
       "Value": { "Fn::Join": [ "", [ "docker -H tcp://", { "Fn::GetAtt": [ "MasterSwarmInstance", "PublicIp" ] }, ":2375 ps" ] ] }
     },
-    "MasterPublicIP": {
+    "ADOPReverseProxyPublicIP": {
       "Description": "Public IP for the cluster master",
-      "Value": { "Fn::GetAtt": [ "MasterSwarmInstance", "PublicIp" ] }
+      "Value": { "Fn::GetAtt": [ "SwarmNginxInstance", "PublicIp" ] }
     },
-    "MasterPrivateIP": {
+    "ADOPReverseProxyPrivateIP": {
       "Description": "Private IP for the cluster master",
-      "Value": { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] }
+      "Value": { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] }
     },
     "ELBPublicDNSName": {
       "Description": "Public URL for the ELB",

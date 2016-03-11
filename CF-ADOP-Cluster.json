@@ -66,19 +66,19 @@
     },
     "RegionMap": {
       "eu-central-1": {
-        "COREOSAMI": "ami-9db652f2"
+        "CENTOSAMI": "ami-9bf712f4"
       },
       "eu-west-1": {
-        "COREOSAMI": "ami-18bb026b"
+        "CENTOSAMI": "ami-7abd0209"
       },
       "us-east-1": {
-        "COREOSAMI": "ami-38d2ea52"
+        "CENTOSAMI": "ami-6d1c2007"
       },
       "us-west-2": {
-        "COREOSAMI": "ami-2b7d914b"
+        "CENTOSAMI": "ami-d2c924b2"
       },
       "us-west-1": {
-        "COREOSAMI": "ami-3d27545d"
+        "CENTOSAMI": "ami-af4333cf"
       }
     }
   },
@@ -557,7 +557,7 @@
           }
         ],
         "Tags": [
-          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "Node-SG" ] ] } }
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "Proxy-SG" ] ] } }
         ]
       },
       "Metadata": {
@@ -603,7 +603,9 @@
             "IpProtocol": "tcp",
             "FromPort": "80",
             "ToPort": "80",
-            "CidrIp": "0.0.0.0/0"
+            "CidrIp": {
+              "Ref": "AllowSSHFrom"
+            }
           }
         ],
         "Tags": [
@@ -647,7 +649,7 @@
             "GroupId"
           ]
         },
-        "IpProtocol": "tcp",
+        "IpProtocol": "udp",
         "FromPort": "4789",
         "ToPort": "4789",
         "SourceSecurityGroupId": {
@@ -671,7 +673,7 @@
             "GroupId"
           ]
         },
-        "IpProtocol": "tcp",
+        "IpProtocol": "udp",
         "FromPort": "4789",
         "ToPort": "4789",
         "SourceSecurityGroupId": {
@@ -961,15 +963,16 @@
         },
         "BlockDeviceMappings": [
                     {
-                        "DeviceName": "/dev/xvda",
+                        "DeviceName": "/dev/sda1",
                         "Ebs": {
                             "DeleteOnTermination": "true",
-                            "VolumeSize": 50
+                            "VolumeSize": 50,
+                            "VolumeType": "gp2"
                         }
                     }
                 ],
         "ImageId": {
-          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "COREOSAMI" ]
+          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "CENTOSAMI" ]
         },
         "InstanceType": { "Ref": "InstanceType" },
         "KeyName": { "Ref": "KeyName" },
@@ -989,55 +992,36 @@
             "Fn::Join": [
               "",
               [
-                "#cloud-config\n\n",
-                "coreos:\n",
-                "  etcd2:\n",
-                "    discovery: ",
-                {
-                  "Ref": "DiscoveryURL"
-                },
-                "\n",
-                "    advertise-client-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2379\n",
-                "    initial-advertise-peer-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2380\n",
-                "    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n",
-                "    listen-peer-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2380\n",
-                "  units:\n",
-                "    - name: docker.service\n",
-                "      drop-ins:\n",
-                "        - name: 10-add-label.conf\n",
-                "          content: |\n",
-                "            [Service]\n",
-                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243\"\n",
-                "      command: start\n",
-                "    - name: etcd2.service\n",
-                "      command: start\n",
-                "    - name: fleet.service\n",
-                "      command: start\n",
-                "    - name: docker-swarm.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Swarm service\n",
-                "        After=docker.service\n\n",
-                "        [Service]\n",
-                "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run --name docker-swarm-node -d -p 2375:2375 swarm manage etcd://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2379/swarm\n"
+              "#!/bin/bash\n",
+              "export IP=$(hostname --ip-address)\n",
+              "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+              "[dockerrepo]\n",
+              "name=Docker Repository\n",
+              "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+              "enabled=1\n",
+              "gpgcheck=1\n",
+              "gpgkey=https://yum.dockerproject.org/gpg\n",
+              "EOF\n",
+              "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+              "sed -i 's/ExecStart\\(.*\\)$/ExecStart\\1 -H tcp:\\\/\\\/0.0.0.0:4243/g' /usr/lib/systemd/system/docker.service\n",
+              "systemctl daemon-reload && systemctl restart docker\n",
+              "yum -y install etcd-2.2.2-5.el7.x86_64\n",
+              "service etcd start\n",
+              "echo \"\n",
+              "ETCD_NAME=default\n",
+              "ETCD_DATA_DIR=\\\"/var/lib/etcd/default.etcd\\\"\n",
+              "ETCD_LISTEN_PEER_URLS=\\\"http://${IP}:2380\\\"\n",
+              "ETCD_LISTEN_CLIENT_URLS=\\\"http://0.0.0.0:2379,http://0.0.0.0:4001\\\"\n",
+              "ETCD_INITIAL_ADVERTISE_PEER_URLS=\\\"http://${IP}:2380\\\"\n",
+              "ETCD_ADVERTISE_CLIENT_URLS=\\\"http://${IP}:2379\\\"\n",
+              "ETCD_DISCOVERY=\\\"",
+              {
+                "Ref": "DiscoveryURL"
+              },
+              "\\\" \"> /etc/etcd/etcd.conf\n",
+              "\n",
+              "systemctl daemon-reload && systemctl restart etcd\n",
+              "docker run --name docker-swarm-master -d -p 2375:2375 swarm manage etcd://${IP}:2379/swarm\n"
               ]
             ]
           }
@@ -1060,15 +1044,16 @@
         },
         "BlockDeviceMappings": [
                     {
-                        "DeviceName": "/dev/xvda",
+                        "DeviceName": "/dev/sda1",
                         "Ebs": {
                             "DeleteOnTermination": "true",
-                            "VolumeSize": 50
+                            "VolumeSize": 50,
+                            "VolumeType": "gp2"
                         }
                     }
                 ],
         "ImageId": {
-          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "COREOSAMI" ]
+          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "CENTOSAMI" ]
         },
         "InstanceType": { "Ref": "InstanceType" },
         "KeyName": { "Ref": "KeyName" },
@@ -1088,69 +1073,34 @@
             "Fn::Join": [
               "",
               [
-                "#cloud-config\n\n",
-                "coreos:\n",
-                "  etcd2:\n",
-                "    discovery: ",
+              "#!/bin/bash\n",
+              "export IP=$(hostname --ip-address)\n",
+              "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+              "[dockerrepo]\n",
+              "name=Docker Repository\n",
+              "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+              "enabled=1\n",
+              "gpgcheck=1\n",
+              "gpgkey=https://yum.dockerproject.org/gpg\n",
+              "EOF\n",
+              "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+              "sed -i 's/ExecStart\\(.*\\)$/ExecStart\\1 -H tcp:\\\/\\\/0.0.0.0:4243 --cluster-store=etcd:\\\/\\\/",
                 {
-                  "Ref": "DiscoveryURL"
-                },
-                "\n",
-                "    advertise-client-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2379\n",
-                "    initial-advertise-peer-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2380\n",
-                "    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n",
-                "    listen-peer-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2380\n",
-                "  units:\n",
-                "    - name: docker.service\n",
-                "      drop-ins:\n",
-                "        - name: 10-add-label.conf\n",
-                "          content: |\n",
-                "            [Service]\n",
-                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243 --cluster-store=etcd://",
-                {
-                  "Fn::GetAtt": [
-                    "MasterSwarmInstance",
-                    "PrivateIp"
-                  ]
-                },
-                ":2379/ --cluster-advertise=eth0:4243 --label tier=public\"\n",
-                "      command: start\n",
-                "    - name: etcd2.service\n",
-                "      command: start\n",
-                "    - name: fleet.service\n",
-                "      command: start\n",
-                "    - name: docker-swarm.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Swarm service\n",
-                "        After=docker.service\n\n",
-                "        [Service]\n",
-                "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run --name docker-swarm-node -d swarm join --addr=$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:4243 etcd://",
-                {
-                  "Fn::GetAtt": [
-                    "MasterSwarmInstance",
-                    "PrivateIp"
-                  ]
-                },
-                ":2379/swarm\n"
+                "Fn::GetAtt": [
+                  "MasterSwarmInstance",
+                  "PrivateIp"
+                ]
+              },
+              ":2379 --cluster-advertise=eth0:4243 --label tier=public/g' /usr/lib/systemd/system/docker.service\n",
+              "systemctl daemon-reload && systemctl restart docker\n",
+              "docker run --name docker-swarm-node -d swarm join --addr=${IP}:4243 etcd://",
+              {
+                "Fn::GetAtt": [
+                  "MasterSwarmInstance",
+                  "PrivateIp"
+                ]
+              },
+              ":2379/swarm\n"
               ]
             ]
           }
@@ -1225,10 +1175,11 @@
       "Properties": {
         "BlockDeviceMappings": [
                     {
-                        "DeviceName": "/dev/xvda",
+                        "DeviceName": "/dev/sda1",
                         "Ebs": {
                             "DeleteOnTermination": "true",
-                            "VolumeSize": 50
+                            "VolumeSize": 50,
+                            "VolumeType": "gp2"
                         }
                     }
                 ],
@@ -1238,7 +1189,7 @@
             {
               "Ref": "AWS::Region"
             },
-            "COREOSAMI"
+            "CENTOSAMI"
           ]
         },
         "InstanceType": {
@@ -1258,68 +1209,34 @@
             "Fn::Join": [
               "",
               [
-                "#cloud-config\n\n",
-                "coreos:\n",
-                "  etcd2:\n",
-                "    discovery: ",
+              "#!/bin/bash\n",
+              "export IP=$(hostname --ip-address)\n",
+              "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+              "[dockerrepo]\n",
+              "name=Docker Repository\n",
+              "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+              "enabled=1\n",
+              "gpgcheck=1\n",
+              "gpgkey=https://yum.dockerproject.org/gpg\n",
+              "EOF\n",
+              "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+              "sed -i 's/ExecStart\\(.*\\)$/ExecStart\\1 -H tcp:\\\/\\\/0.0.0.0:4243 --cluster-store=etcd:\\\/\\\/",
                 {
-                  "Ref": "DiscoveryURL"
-                },
-                "\n",
-                "    advertise-client-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2379\n",
-                "    initial-advertise-peer-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2380\n",
-                "    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n",
-                "    listen-peer-urls: http://$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:2380\n",
-                "  units:\n",
-                "    - name: docker.service\n",
-                "      drop-ins:\n",
-                "        - name: 10-add-label.conf\n",
-                "          content: |\n",
-                "            [Service]\n",
-                "            Environment=\"DOCKER_OPTS=-H=0.0.0.0:4243 --cluster-store=etcd://",
-                {
-                  "Fn::GetAtt": [
-                    "MasterSwarmInstance",
-                    "PrivateIp"
-                  ]
-                },
-                ":2379/ --cluster-advertise=eth0:4243\"\n",
-                "    - name: etcd2.service\n",
-                "      command: start\n",
-                "    - name: fleet.service\n",
-                "      command: start\n",
-                "    - name: docker-swarm-node.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Swarm service\n",
-                "        After=docker.service\n\n",
-                "        [Service]\n",
-                "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run --name docker-swarm-node -d swarm join --addr=$",
-                {
-                  "Ref": "AdvertisedIPAddress"
-                },
-                "_ipv4:4243 etcd://",
-                {
-                  "Fn::GetAtt": [
-                    "MasterSwarmInstance",
-                    "PrivateIp"
-                  ]
-                },
-                ":2379/swarm\n"
+                "Fn::GetAtt": [
+                  "MasterSwarmInstance",
+                  "PrivateIp"
+                ]
+              },
+              ":2379 --cluster-advertise=eth0:4243/g' /usr/lib/systemd/system/docker.service\n",
+              "systemctl daemon-reload && systemctl restart docker\n",
+              "docker run --name docker-swarm-node -d swarm join --addr=${IP}:4243 etcd://",
+              {
+                "Fn::GetAtt": [
+                  "MasterSwarmInstance",
+                  "PrivateIp"
+                ]
+              },
+              ":2379/swarm\n"
               ]
             ]
           }
@@ -1377,15 +1294,16 @@
       "Properties": {
         "BlockDeviceMappings": [
                     {
-                        "DeviceName": "/dev/xvda",
+                        "DeviceName": "/dev/sda1",
                         "Ebs": {
                             "DeleteOnTermination": "true",
-                            "VolumeSize": 50
+                            "VolumeSize": 50,
+                            "VolumeType": "gp2"
                         }
                     }
                 ],
         "ImageId": {
-          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "COREOSAMI" ]
+          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "CENTOSAMI" ]
         },
         "InstanceType": { "Ref": "InstanceType" },
         "AssociatePublicIpAddress": true,
@@ -1399,34 +1317,20 @@
             "Fn::Join": [
               "",
               [
-                "#cloud-config\n\n",
-                "coreos:\n",
-                "  units:\n",
-                "    - name: docker-tcp.socket\n",
-                "      command: start\n",
-                "      enable: true\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Docker Socket for the API\n\n",
-                "        [Socket]\n",
-                "        ListenStream=4243\n",
-                "        BindIPv6Only=both\n",
-                "        Service=docker.service\n\n",
-                "        [Install]\n",
-                "        WantedBy=sockets.target\n",
-                "    - name: fleet.service\n",
-                "      command: start\n",
-                "    - name: outer-proxy-nginx.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Swarm service\n",
-                "        After=docker.service\n\n",
-                "        [Service]\n",
-                "        Restart=no\n",
-                "        ExecStart=/usr/bin/docker run -p 80:80 -d --add-host target:",
-                { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] },
-                " --name=outer-proxy-nginx -d mcroker/adop-nginx-proxy\n"
+              "#!/bin/bash\n",
+              "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+              "[dockerrepo]\n",
+              "name=Docker Repository\n",
+              "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+              "enabled=1\n",
+              "gpgcheck=1\n",
+              "gpgkey=https://yum.dockerproject.org/gpg\n",
+              "EOF\n",
+              "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+              "service docker start\n",
+              "docker run -p 80:80 -d --add-host target:",
+              { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] },
+              " --name=outer-proxy-nginx -d mcroker/adop-nginx-proxy\n"
               ]
             ]
           }
@@ -1448,7 +1352,7 @@
       "Value": { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] }
     },
     "ELBPublicDNSName": {
-      "Description": "Pulic URL for the ELB",
+      "Description": "Public URL for the ELB",
       "Value": { "Fn::Join": [ "", [ "http://" , { "Fn::GetAtt": [ "ProxyElasticLoadBalancer", "DNSName" ] } ] ] }
     }
   }

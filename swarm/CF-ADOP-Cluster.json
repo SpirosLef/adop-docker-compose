@@ -129,10 +129,10 @@
     },
     "ClusterSize": {
       "Type": "Number",
-      "Default": "2",
-      "MinValue": "2",
+      "Default": "3",
+      "MinValue": "3",
       "MaxValue": "12",
-      "Description": "Number of nodes in the Swarm cluster (2-12)."
+      "Description": "Number of nodes in the Swarm cluster (3-12)."
     },
     "ProxyClusterSize": {
       "Type": "Number",
@@ -466,7 +466,7 @@
       }
     },
     "MasterSwarmSecurityGroup": {
-      "DependsOn": "NodeSwarmSecurityGroup",
+      "DependsOn": ["NodeSwarmSecurityGroup","ProxySecurityGroup"],
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
         "GroupDescription": "Master Swarm SecurityGroup",
@@ -476,31 +476,23 @@
             "IpProtocol": "tcp",
             "FromPort": "22",
             "ToPort": "22",
-            "CidrIp": {
-              "Ref": "AllowSSHFrom"
-            }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "4243",
-            "ToPort": "4243",
-            "CidrIp": {
-              "Ref": "AllowSSHFrom"
+            "SourceSecurityGroupId": {
+              "Fn::GetAtt": [
+                "ProxySecurityGroup",
+                "GroupId"
+              ]
             }
           },
           {
             "IpProtocol": "tcp",
             "FromPort": "2375",
             "ToPort": "2375",
-            "CidrIp": {
-              "Ref": "AllowSSHFrom"
+            "SourceSecurityGroupId": {
+              "Fn::GetAtt": [
+                "ProxySecurityGroup",
+                "GroupId"
+              ]
             }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "80",
-            "ToPort": "80",
-            "CidrIp": "0.0.0.0/0"
           },
           {
             "IpProtocol": "tcp",
@@ -582,6 +574,14 @@
             "IpProtocol": "tcp",
             "FromPort": "80",
             "ToPort": "80",
+            "CidrIp": {
+              "Ref": "AllowSSHFrom"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "2375",
+            "ToPort": "2375",
             "CidrIp": {
               "Ref": "AllowSSHFrom"
             }
@@ -674,7 +674,7 @@
         ]
       }
     },
-    "NatSecurityGroupIngress1" : {
+    "NatSecurityGroupIngressSwarmAz1icmp" : {
       "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
@@ -682,10 +682,10 @@
         "IpProtocol": "icmp",
         "FromPort": "-1",
         "ToPort": "-1",
-        "SourceSecurityGroupId": { "Ref": "NodeSwarmSecurityGroup" }
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet1" ] }
       }
     },
-    "NatSecurityGroupIngress22" : {
+    "NatSecurityGroupIngressSwarmAz122" : {
       "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
@@ -693,21 +693,10 @@
         "IpProtocol": "tcp",
         "FromPort": "22",
         "ToPort": "22",
-        "SourceSecurityGroupId": { "Ref": "NodeSwarmSecurityGroup" }
-      }
-    },    
-    "NatSecurityGroupIngress3389" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
-      "Type": "AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
-        "IpProtocol": "tcp",
-        "FromPort": "3389",
-        "ToPort": "3389",
-        "SourceSecurityGroupId": { "Ref": "NodeSwarmSecurityGroup" }
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet1" ] }
       }
     },
-    "NatSecurityGroupIngress80" : {
+    "NatSecurityGroupIngressSwarmAz180" : {
       "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
@@ -715,10 +704,10 @@
         "IpProtocol": "tcp",
         "FromPort": "80",
         "ToPort": "80",
-        "SourceSecurityGroupId": { "Ref": "NodeSwarmSecurityGroup" }
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet1" ] }
       }
     },
-    "NatSecurityGroupIngress443" : {
+    "NatSecurityGroupIngressSwarmAz1443" : {
       "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
@@ -726,7 +715,95 @@
         "IpProtocol": "tcp",
         "FromPort": "443",
         "ToPort": "443",
-        "SourceSecurityGroupId": { "Ref": "NodeSwarmSecurityGroup" }
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet1" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz2icmp" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "icmp",
+        "FromPort": "-1",
+        "ToPort": "-1",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet2" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz222" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet2" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz280" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "80",
+        "ToPort": "80",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet2" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz2443" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "443",
+        "ToPort": "443",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet2" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz3icmp" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "icmp",
+        "FromPort": "-1",
+        "ToPort": "-1",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet3" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz322" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet3" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz380" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "80",
+        "ToPort": "80",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet3" ] }
+      }
+    },
+    "NatSecurityGroupIngressSwarmAz3443" : {
+      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "NatSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "443",
+        "ToPort": "443",
+        "CidrIp" : { "Fn::FindInMap": [ "VpcCidrs", { "Ref": "AWS::Region" }, "swarmsubnet3" ] }
       }
     },
     "NodeIngress4243": {
@@ -1117,10 +1194,9 @@
         "KeyName": { "Ref": "KeyName" },
         "NetworkInterfaces": [
           {
-            "AssociatePublicIpAddress": "true",
             "DeleteOnTermination": "true",
             "DeviceIndex": "0",
-            "SubnetId": { "Ref": "ProxySubnetAz1" },
+            "SubnetId": { "Ref": "SwarmSubnetAz1" },
             "GroupSet": [
               { "Ref": "MasterSwarmSecurityGroup" }
             ]
@@ -1198,7 +1274,6 @@
         "KeyName": { "Ref": "KeyName" },
         "NetworkInterfaces": [
           {
-            "AssociatePublicIpAddress": "true",
             "DeleteOnTermination": "true",
             "DeviceIndex": "0",
             "SubnetId": { "Ref": "SwarmSubnetAz1" },
@@ -1277,7 +1352,7 @@
         "LaunchConfigurationName": {
           "Ref": "SwarmServerLc"
         },
-        "MinSize": "2",
+        "MinSize": "3",
         "MaxSize": "12",
         "DesiredCapacity": {
           "Ref": "ClusterSize"
@@ -1466,9 +1541,11 @@
               "EOF\n",
               "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
               "service docker start\n",
-              "docker run -p 80:80 -d --add-host target:",
+              "docker run -p 80:80 -p 2375:2375 -d --add-host target:",
               { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] },
-              " --name=outer-proxy-nginx -d sachin28/outer-proxy\n"
+              " --add-host swarm-master:",
+              { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] },
+              " --name=outer-proxy-nginx -d sachin28/swarm-proxy:0.0.1\n"
               ]
             ]
           }
@@ -1479,14 +1556,10 @@
   "Outputs": {
     "MasterDockerPs": {
       "Description": "Command to run a 'docker ps' on the cluster master",
-      "Value": { "Fn::Join": [ "", [ "docker -H tcp://", { "Fn::GetAtt": [ "MasterSwarmInstance", "PublicIp" ] }, ":2375 ps" ] ] }
-    },
-    "ADOPReverseProxyPublicIP": {
-      "Description": "Public IP for the cluster master",
-      "Value": { "Fn::GetAtt": [ "SwarmNginxInstance", "PublicIp" ] }
+      "Value": { "Fn::Join": [ "", [ "docker -H tcp://", { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] }, ":2375 ps" ] ] }
     },
     "ADOPReverseProxyPrivateIP": {
-      "Description": "Private IP for the cluster master",
+      "Description": "Private IP for the ADOP Proxy",
       "Value": { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] }
     },
     "ELBPublicDNSName": {

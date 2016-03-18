@@ -58,7 +58,6 @@ alternative cluster manager.
 Try
 
     docker -H tcp://_OuterProxyPublicIP_:2375 info
-    docker -H tcp://_OuterProxyPublicIP_:2375 run docker/whalesay cowsay 'It works!'
 
 to see if the cluster is working.
 

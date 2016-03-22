@@ -143,7 +143,7 @@
     },
     "DiscoveryURL": {
       "Type": "String",
-      "Description": "A unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new?size=4",
+      "Description": "A unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new?size=5",
       "Default": ""
     },
     "AdvertisedIPAddress": {
@@ -595,6 +595,32 @@
         "AWS::CloudFormation::Designer": { "id": "177132d6-1261-4cad-bd05-7e458a0a8ede" }
       }
     },
+    "ProxyPrivateELBSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "ELB SecurityGroup",
+        "VpcId": { "Ref": "Vpc" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "SourceSecurityGroupId": {
+              "Fn::GetAtt": [
+                "ProxySecurityGroup",
+                "GroupId"
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "Private-ELB-SG" ] ] } }
+        ]
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": { "id": "177132d6-1261-4cad-bd05-7e458a0a8ede" }
+      }
+    },
     "ProxyELBSSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -635,7 +661,7 @@
             "FromPort": "80",
             "ToPort": "80",
             "SourceSecurityGroupId": {
-              "Ref": "ProxySecurityGroup"
+              "Ref": "ProxyPrivateELBSSecurityGroup"
             }
           }
         ],
@@ -1249,14 +1275,94 @@
         "AWS::CloudFormation::Designer": { "id": "79ad6da3-fa7c-4bd5-91aa-5f5f244cb921" }
       }
     },
-    "SwarmNginxInstance": {
-      "DependsOn": "AttachGateway",
-      "Type": "AWS::EC2::Instance",
-      "Properties": {
-        "AvailabilityZone": {
-          "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" }
-          ]
+    "ProxyPrivateElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "Subnets": [ { "Ref": "SwarmSubnetAz1" }, { "Ref": "SwarmSubnetAz2" }, { "Ref": "SwarmSubnetAz3" }  ],
+        "Scheme": "internal",
+        "CrossZone" : "true",
+        "Listeners" : [ {
+          "LoadBalancerPort" : "80",
+          "InstancePort" : "80",
+          "Protocol" : "HTTP"
+        } ],
+        "HealthCheck" : {
+          "Target" : "TCP:80",
+          "HealthyThreshold" : "3",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "30",
+          "Timeout" : "5"
         },
+        "SecurityGroups" : [{ 
+           "Fn::GetAtt": [
+              "ProxyPrivateELBSSecurityGroup",
+              "GroupId"
+            ]
+        }]
+      }
+    },
+    "NgnixServerAsg": {
+      "DependsOn": "MasterSwarmInstance",
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": [ { "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "1", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "2", { "Ref": "VpcAvailabilityZones" } ]
+          }
+        ],
+        "VPCZoneIdentifier": [
+          {
+            "Fn::Join": [
+              ",",
+              [
+                {
+                  "Ref": "SwarmSubnetAz1"
+                },
+                {
+                  "Ref": "SwarmSubnetAz2"
+                },
+                {
+                  "Ref": "SwarmSubnetAz3"
+                }
+              ]
+            ]
+          }
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "NgnixServerLc"
+        },
+        "MinSize": "1",
+        "MaxSize": "3",
+        "DesiredCapacity": "1",
+        "LoadBalancerNames" : [ { "Ref" : "ProxyPrivateElasticLoadBalancer" } ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "Nginx"
+                ]
+              ]
+            },
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "05488b7d-7fba-496a-bcca-4ca6a9823f8d"
+        }
+      }
+    },
+    "NgnixServerLc": {
+      "DependsOn": [
+        "MasterSwarmInstance"
+      ],
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
         "BlockDeviceMappings": [
                     {
                         "DeviceName": "/dev/sda1",
@@ -1268,18 +1374,23 @@
                     }
                 ],
         "ImageId": {
-          "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "CENTOSAMI" ]
+          "Fn::FindInMap": [
+            "RegionMap",
+            {
+              "Ref": "AWS::Region"
+            },
+            "CENTOSAMI"
+          ]
         },
-        "InstanceType": { "Ref": "InstanceType" },
-        "KeyName": { "Ref": "KeyName" },
-        "NetworkInterfaces": [
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "SecurityGroups": [
           {
-            "DeleteOnTermination": "true",
-            "DeviceIndex": "0",
-            "SubnetId": { "Ref": "SwarmSubnetAz1" },
-            "GroupSet": [
-              { "Ref": "NodeSwarmSecurityGroup" }
-            ]
+            "Ref": "NodeSwarmSecurityGroup"
           }
         ],
         "UserData": {
@@ -1318,10 +1429,7 @@
               ]
             ]
           }
-        },
-        "Tags": [
-          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "Node-nginx" ] ] } }
-        ]
+        }
       }
     },
     "SwarmServerAsg": {
@@ -1468,7 +1576,7 @@
           "Protocol" : "HTTP"
         } ],
         "HealthCheck" : {
-          "Target" : "HTTP:80/",
+          "Target" : "TCP:80",
           "HealthyThreshold" : "3",
           "UnhealthyThreshold" : "5",
           "Interval" : "30",
@@ -1502,7 +1610,7 @@
       }
     },
     "ProxyServerLc": {
-      "DependsOn": "AttachGateway",
+      "DependsOn": ["AttachGateway", "ProxyPrivateElasticLoadBalancer"],
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
         "BlockDeviceMappings": [
@@ -1541,11 +1649,11 @@
               "EOF\n",
               "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
               "service docker start\n",
-              "docker run -p 80:80 -p 2375:2375 -d --add-host target:",
-              { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] },
+              "docker run -p 80:80 -p 2375:2375 -d -e ELB_DNS=",
+              { "Fn::GetAtt": [ "ProxyPrivateElasticLoadBalancer", "DNSName" ] },
               " --add-host swarm-master:",
               { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] },
-              " --name=outer-proxy-nginx -d sachin28/swarm-proxy:0.0.1\n"
+              " --name=outer-proxy-nginx -d sachin28/swarm-proxy:0.0.2\n"
               ]
             ]
           }
@@ -1558,9 +1666,9 @@
       "Description": "Command to run a 'docker ps' on the cluster master",
       "Value": { "Fn::Join": [ "", [ "docker -H tcp://", { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] }, ":2375 ps" ] ] }
     },
-    "ADOPReverseProxyPrivateIP": {
+    "ADOPReverseProxy": {
       "Description": "Private IP for the ADOP Proxy",
-      "Value": { "Fn::GetAtt": [ "SwarmNginxInstance", "PrivateIp" ] }
+      "Value": { "Fn::Join": [ "", [ "http://" , { "Fn::GetAtt": [ "ProxyPrivateElasticLoadBalancer", "DNSName" ] } ] ] }
     },
     "ELBPublicDNSName": {
       "Description": "Public URL for the ELB",

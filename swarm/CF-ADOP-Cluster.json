@@ -127,6 +127,26 @@
       "ConstraintDescription": "Must be a valid EC2 HVM instance type.",
       "Default": "t2.small"
     },
+    "NATInstanceType": {
+      "Type": "String",
+      "Description": "EC2 HVM instance type (t2.small, m3.medium, etc).",
+      "AllowedValues": [
+        "t2.small",
+        "t2.medium",
+        "t2.large",
+        "m4.large",
+        "m4.xlarge",
+        "m4.2xlarge",
+        "m4.4xlarge",
+        "m4.10xlarge",
+        "m3.medium",
+        "m3.large",
+        "m3.xlarge",
+        "m3.2xlarge"
+      ],
+      "ConstraintDescription": "Must be a valid EC2 HVM instance type.",
+      "Default": "t2.small"
+    },
     "ClusterSize": {
       "Type": "Number",
       "Default": "3",
@@ -350,7 +370,7 @@
         "AWS::CloudFormation::Designer": { "id": "29572776-22d3-461e-9f5f-b98f4d84bfeb" }
       }
     },
-    "PrivateSwarmRoute": {
+    "PrivateSwarmRouteAz1": {
       "Type": "AWS::EC2::RouteTable",
       "Properties": {
         "VpcId": { "Ref": "Vpc" }
@@ -359,13 +379,55 @@
         "AWS::CloudFormation::Designer": { "id": "01747984-31b5-46ad-8757-a0b938b82afc" }
       }
     },
-    "PrivateSwarmRouteEntryViaNAT": {
-      "Type": "AWS::EC2::Route",
-      "DependsOn" : ["PrivateSwarmRoute", "NATInstance"],
+    "PrivateSwarmRouteAz2": {
+      "Type": "AWS::EC2::RouteTable",
       "Properties": {
-        "RouteTableId": { "Ref": "PrivateSwarmRoute" },
+        "VpcId": { "Ref": "Vpc" }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": { "id": "01747984-31b5-46ad-8757-a0b938b82afc" }
+      }
+    },
+    "PrivateSwarmRouteAz3": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "Vpc" }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": { "id": "01747984-31b5-46ad-8757-a0b938b82afc" }
+      }
+    },
+    "PrivateSwarmRouteEntryViaNATAz1": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn" : ["PrivateSwarmRouteAz1", "NATInstanceAz1"],
+      "Properties": {
+        "RouteTableId": { "Ref": "PrivateSwarmRouteAz1" },
         "DestinationCidrBlock": "0.0.0.0/0",
-        "InstanceId": { "Ref": "NATInstance" }
+        "InstanceId": { "Ref": "NATInstanceAz1" }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": { "id": "29572776-22d3-461e-9f5f-b98f4d84bfeb" }
+      }
+    },
+    "PrivateSwarmRouteEntryViaNATAz2": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn" : ["PrivateSwarmRouteAz2", "NATInstanceAz2"],
+      "Properties": {
+        "RouteTableId": { "Ref": "PrivateSwarmRouteAz2" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId": { "Ref": "NATInstanceAz2" }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": { "id": "29572776-22d3-461e-9f5f-b98f4d84bfeb" }
+      }
+    },
+    "PrivateSwarmRouteEntryViaNATAz3": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn" : ["PrivateSwarmRouteAz3", "NATInstanceAz3"],
+      "Properties": {
+        "RouteTableId": { "Ref": "PrivateSwarmRouteAz3" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId": { "Ref": "NATInstanceAz3" }
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": { "id": "29572776-22d3-461e-9f5f-b98f4d84bfeb" }
@@ -375,7 +437,7 @@
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "Properties": {
         "SubnetId": { "Ref": "SwarmSubnetAz1" },
-        "RouteTableId": { "Ref": "PrivateSwarmRoute" }
+        "RouteTableId": { "Ref": "PrivateSwarmRouteAz1" }
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": { "id": "5d241c68-e0b5-4195-a776-3a7630ef961b" }
@@ -385,7 +447,7 @@
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "Properties": {
         "SubnetId": { "Ref": "SwarmSubnetAz2" },
-        "RouteTableId": { "Ref": "PrivateSwarmRoute" }
+        "RouteTableId": { "Ref": "PrivateSwarmRouteAz2" }
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": { "id": "65a52709-59de-423b-bba2-9973a6e48090" }
@@ -395,7 +457,7 @@
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "Properties": {
         "SubnetId": { "Ref": "SwarmSubnetAz3" },
-        "RouteTableId": { "Ref": "PrivateSwarmRoute" }
+        "RouteTableId": { "Ref": "PrivateSwarmRouteAz3" }
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": { "id": "abbda6da-ab03-4876-8493-878c5b1659c3" }
@@ -675,7 +737,7 @@
         }
       }
     },
-    "NatSecurityGroup" : {
+    "NatSecurityGroupAz1" : {
       "DependsOn" : ["Vpc"],
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
@@ -696,15 +758,65 @@
           }
         ],
         "Tags" : [
-          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NAT-SG" ] ] } }
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NATAZ1-SG" ] ] } }
+        ]
+      }
+    },
+    "NatSecurityGroupAz2" : {
+      "DependsOn" : ["Vpc"],
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "NAT Security Group",
+        "VpcId" : { "Ref" : "Vpc" },
+        "SecurityGroupIngress" : [
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "22",
+            "ToPort" : "22",
+            "CidrIp" : { "Ref" : "AllowSSHFrom" }
+          },
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "3389",
+            "ToPort" : "3389",
+            "CidrIp" : { "Ref" : "AllowSSHFrom" }
+          }
+        ],
+        "Tags" : [
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NATAZ2-SG" ] ] } }
+        ]
+      }
+    },
+    "NatSecurityGroupAz3" : {
+      "DependsOn" : ["Vpc"],
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "NAT Security Group",
+        "VpcId" : { "Ref" : "Vpc" },
+        "SecurityGroupIngress" : [
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "22",
+            "ToPort" : "22",
+            "CidrIp" : { "Ref" : "AllowSSHFrom" }
+          },
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "3389",
+            "ToPort" : "3389",
+            "CidrIp" : { "Ref" : "AllowSSHFrom" }
+          }
+        ],
+        "Tags" : [
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NATAZ3-SG" ] ] } }
         ]
       }
     },
     "NatSecurityGroupIngressSwarmAz1icmp" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz1", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz1" },
         "IpProtocol": "icmp",
         "FromPort": "-1",
         "ToPort": "-1",
@@ -712,10 +824,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz122" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz1", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz1" },
         "IpProtocol": "tcp",
         "FromPort": "22",
         "ToPort": "22",
@@ -723,10 +835,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz180" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz1", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz1" },
         "IpProtocol": "tcp",
         "FromPort": "80",
         "ToPort": "80",
@@ -734,10 +846,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz1443" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz1", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz1" },
         "IpProtocol": "tcp",
         "FromPort": "443",
         "ToPort": "443",
@@ -745,10 +857,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz2icmp" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz2", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz2" },
         "IpProtocol": "icmp",
         "FromPort": "-1",
         "ToPort": "-1",
@@ -756,10 +868,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz222" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz2", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz2" },
         "IpProtocol": "tcp",
         "FromPort": "22",
         "ToPort": "22",
@@ -767,10 +879,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz280" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz2", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz2" },
         "IpProtocol": "tcp",
         "FromPort": "80",
         "ToPort": "80",
@@ -778,10 +890,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz2443" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz2", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz2" },
         "IpProtocol": "tcp",
         "FromPort": "443",
         "ToPort": "443",
@@ -789,10 +901,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz3icmp" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz3", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz3" },
         "IpProtocol": "icmp",
         "FromPort": "-1",
         "ToPort": "-1",
@@ -800,10 +912,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz322" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz3", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz3" },
         "IpProtocol": "tcp",
         "FromPort": "22",
         "ToPort": "22",
@@ -811,10 +923,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz380" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz3", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz3" },
         "IpProtocol": "tcp",
         "FromPort": "80",
         "ToPort": "80",
@@ -822,10 +934,10 @@
       }
     },
     "NatSecurityGroupIngressSwarmAz3443" : {
-      "DependsOn" : ["NatSecurityGroup", "NodeSwarmSecurityGroup"],
+      "DependsOn" : ["NatSecurityGroupAz3", "NodeSwarmSecurityGroup"],
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "NatSecurityGroup" },
+        "GroupId": { "Ref": "NatSecurityGroupAz3" },
         "IpProtocol": "tcp",
         "FromPort": "443",
         "ToPort": "443",
@@ -1167,27 +1279,71 @@
         }
       }
     },
-    "NATInstance" : {
-      "DependsOn" : ["ProxySubnetAz1", "NatSecurityGroup"],
+    "NATInstanceAz1" : {
+      "DependsOn" : ["ProxySubnetAz1", "NatSecurityGroupAz1"],
       "Type" : "AWS::EC2::Instance",
       "Properties" : {
-        "AvailabilityZone": {
-          "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" }
-          ]
-        },
-        "InstanceType" : "t2.medium",
+        "InstanceType" : { "Ref": "NATInstanceType" },
         "KeyName"  : { "Ref" : "KeyName" },
         "SourceDestCheck" : "false",
         "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref": "AWS::Region" }, "NATAMI" ]},
         "NetworkInterfaces" : [{
-          "GroupSet"                 : [{ "Ref" : "NatSecurityGroup" }],
+          "GroupSet"                 : [{ "Ref" : "NatSecurityGroupAz1" }],
           "AssociatePublicIpAddress" : "true",
           "DeviceIndex"              : "0",
           "DeleteOnTermination"      : "true",
           "SubnetId"                 : { "Ref" : "ProxySubnetAz1" }
         }],
         "Tags" : [
-          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NAT" ] ] } }
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NATAZ1" ] ] } }
+        ],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+        "#!/bin/bash\n",
+        "yum update -y && yum install -y yum-cron && chkconfig yum-cron on"
+        ]]}}
+      }
+    },
+    "NATInstanceAz2" : {
+      "DependsOn" : ["ProxySubnetAz2", "NatSecurityGroupAz2"],
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : { "Ref": "NATInstanceType" },
+        "KeyName"  : { "Ref" : "KeyName" },
+        "SourceDestCheck" : "false",
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref": "AWS::Region" }, "NATAMI" ]},
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "NatSecurityGroupAz2" }],
+          "AssociatePublicIpAddress" : "true",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Ref" : "ProxySubnetAz2" }
+        }],
+        "Tags" : [
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NATAZ2" ] ] } }
+        ],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+        "#!/bin/bash\n",
+        "yum update -y && yum install -y yum-cron && chkconfig yum-cron on"
+        ]]}}
+      }
+    },
+    "NATInstanceAz3" : {
+      "DependsOn" : ["ProxySubnetAz3", "NatSecurityGroupAz3"],
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : { "Ref": "NATInstanceType" },
+        "KeyName"  : { "Ref" : "KeyName" },
+        "SourceDestCheck" : "false",
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref": "AWS::Region" }, "NATAMI" ]},
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "NatSecurityGroupAz3" }],
+          "AssociatePublicIpAddress" : "true",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Ref" : "ProxySubnetAz3" }
+        }],
+        "Tags" : [
+          { "Key": "Name", "Value": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "NATAZ3" ] ] } }
         ],
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
         "#!/bin/bash\n",
@@ -1196,7 +1352,12 @@
       }
     },
     "MasterSwarmInstance": {
-      "DependsOn": "AttachGateway",
+      "DependsOn": [
+        "AttachGateway",
+        "NATInstanceAz1",
+        "NATInstanceAz2",
+        "NATInstanceAz3"
+      ],
       "Type": "AWS::EC2::Instance",
       "Properties": {
         "AvailabilityZone": {
@@ -1262,7 +1423,7 @@
               "\\\" \"> /etc/etcd/etcd.conf\n",
               "\n",
               "systemctl daemon-reload && systemctl restart etcd\n",
-              "docker run --name docker-swarm-master -d -p 2375:2375 swarm manage etcd://${IP}:2379/swarm\n"
+              "docker run --name docker-swarm-master -d -p 2375:2375 swarm manage -H :2375 --replication --advertise ${IP}:2375 etcd://${IP}:2379/swarm\n"
               ]
             ]
           }
@@ -1302,7 +1463,12 @@
       }
     },
     "NgnixServerAsg": {
-      "DependsOn": "MasterSwarmInstance",
+      "DependsOn": [
+        "MasterSwarmInstance",
+        "NATInstanceAz1",
+        "NATInstanceAz2",
+        "NATInstanceAz3"
+      ],
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
         "AvailabilityZones": [ { "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "1", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "2", { "Ref": "VpcAvailabilityZones" } ]
@@ -1359,7 +1525,10 @@
     },
     "NgnixServerLc": {
       "DependsOn": [
-        "MasterSwarmInstance"
+        "MasterSwarmInstance",
+        "NATInstanceAz1",
+        "NATInstanceAz2",
+        "NATInstanceAz3"
       ],
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
@@ -1408,8 +1577,25 @@
               "gpgcheck=1\n",
               "gpgkey=https://yum.dockerproject.org/gpg\n",
               "EOF\n",
+              "yum -y update\n",
+              "yum -y install etcd-2.2.2-5.el7.x86_64\n",
+              "service etcd start\n",
+              "echo \"\n",
+              "ETCD_NAME=${IP}\n",
+              "ETCD_DATA_DIR=\\\"/var/lib/etcd/default.etcd\\\"\n",
+              "ETCD_LISTEN_PEER_URLS=\\\"http://${IP}:2380\\\"\n",
+              "ETCD_LISTEN_CLIENT_URLS=\\\"http://${IP}:2379,http://127.0.0.1:2379\\\"\n",
+              "ETCD_INITIAL_ADVERTISE_PEER_URLS=\\\"http://${IP}:2380\\\"\n",
+              "ETCD_ADVERTISE_CLIENT_URLS=\\\"http://${IP}:2379\\\"\n",
+              "ETCD_DISCOVERY=\\\"",
+              {
+                "Ref": "DiscoveryURL"
+              },
+              "\\\" \"> /etc/etcd/etcd.conf\n",
+              "\n",
+              "systemctl daemon-reload && systemctl restart etcd\n",
               "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
-              "sed -i 's/ExecStart\\(.*\\)$/ExecStart\\1 -H tcp:\\\/\\\/0.0.0.0:4243 --cluster-store=etcd:\\\/\\\/",
+                            "sed -i 's/ExecStart\\(.*\\)$/ExecStart\\1 -H tcp:\\\/\\\/0.0.0.0:4243 --cluster-store=etcd:\\\/\\\/",
                 {
                 "Fn::GetAtt": [
                   "MasterSwarmInstance",
@@ -1433,7 +1619,12 @@
       }
     },
     "SwarmServerAsg": {
-      "DependsOn": "MasterSwarmInstance",
+      "DependsOn": [
+        "MasterSwarmInstance",
+        "NATInstanceAz1",
+        "NATInstanceAz2",
+        "NATInstanceAz3"
+      ],
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
         "AvailabilityZones": [ { "Fn::Select": [ "0", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "1", { "Ref": "VpcAvailabilityZones" } ] }, { "Fn::Select": [ "2", { "Ref": "VpcAvailabilityZones" } ]
@@ -1491,7 +1682,10 @@
     },
     "SwarmServerLc": {
       "DependsOn": [
-        "MasterSwarmInstance"
+        "MasterSwarmInstance",
+        "NATInstanceAz1",
+        "NATInstanceAz2",
+        "NATInstanceAz3"
       ],
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
@@ -1540,6 +1734,23 @@
               "gpgcheck=1\n",
               "gpgkey=https://yum.dockerproject.org/gpg\n",
               "EOF\n",
+              "yum -y update\n",
+              "yum -y install etcd-2.2.2-5.el7.x86_64\n",
+              "service etcd start\n",
+              "echo \"\n",
+              "ETCD_NAME=${IP}\n",
+              "ETCD_DATA_DIR=\\\"/var/lib/etcd/default.etcd\\\"\n",
+              "ETCD_LISTEN_PEER_URLS=\\\"http://${IP}:2380\\\"\n",
+              "ETCD_LISTEN_CLIENT_URLS=\\\"http://${IP}:2379,http://127.0.0.1:2379\\\"\n",
+              "ETCD_INITIAL_ADVERTISE_PEER_URLS=\\\"http://${IP}:2380\\\"\n",
+              "ETCD_ADVERTISE_CLIENT_URLS=\\\"http://${IP}:2379\\\"\n",
+              "ETCD_DISCOVERY=\\\"",
+              {
+                "Ref": "DiscoveryURL"
+              },
+              "\\\" \"> /etc/etcd/etcd.conf\n",
+              "\n",
+              "systemctl daemon-reload && systemctl restart etcd\n",
               "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
               "sed -i 's/ExecStart\\(.*\\)$/ExecStart\\1 -H tcp:\\\/\\\/0.0.0.0:4243 --cluster-store=etcd:\\\/\\\/",
                 {
@@ -1649,11 +1860,11 @@
               "EOF\n",
               "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
               "service docker start\n",
-              "docker run -p 80:80 -p 2375:2375 -d -e ELB_DNS=",
+              "docker run -p 80:80 -p 2375:2375 -d -e TARGET=",
               { "Fn::GetAtt": [ "ProxyPrivateElasticLoadBalancer", "DNSName" ] },
-              " --add-host swarm-master:",
+              " -e SWARM_MASTER_HOST=",
               { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] },
-              " --name=outer-proxy-nginx -d sachin28/swarm-proxy:0.0.2\n"
+              " -e SWARM_MASTER_PORT=2375 --name=outer-proxy-nginx -d sachin28/swarm-proxy:0.0.2\n"
               ]
             ]
           }
@@ -1664,7 +1875,7 @@
   "Outputs": {
     "MasterDockerPs": {
       "Description": "Command to run a 'docker ps' on the cluster master",
-      "Value": { "Fn::Join": [ "", [ "docker -H tcp://", { "Fn::GetAtt": [ "MasterSwarmInstance", "PrivateIp" ] }, ":2375 ps" ] ] }
+      "Value": { "Fn::Join": [ "", [ "docker -H tcp://", { "Fn::GetAtt": [ "ProxyElasticLoadBalancer", "DNSName" ] }, ":2375 ps" ] ] }
     },
     "ADOPReverseProxy": {
       "Description": "Private IP for the ADOP Proxy",
@@ -1676,3 +1887,4 @@
     }
   }
 }
+  

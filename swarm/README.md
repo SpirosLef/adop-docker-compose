@@ -9,15 +9,16 @@ The CloudFormation template takes the following parameters:
 
 | Parameter | Description |
 |-----------|-------------|
-| InstanceType | EC2 HVM instance type (t2.micro, m3.medium, etc.) for the
+| SwarmNodeInstanceType | EC2 HVM instance type (t2.micro, m3.medium, etc.) for the
 Swarm master and node hosts. |
-| ClusterSize | Number of nodes in the Swarm cluster (3-12). |
-| ProxyClusterSize | Number of outer proxy nodes (1-12). |
-| DiscoveryURL | A unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new?size=4 |
-| AdvertisedIPAddress | Use 'private' if your etcd cluster is within one region or 'public' if it spans regions or cloud providers. |
-| AllowSSHFrom | The net block (CIDR) from which you can use SSH and docker to communicate with the Swarm master. |
-| KeyName | The name of an EC2 Key Pair to allow SSH access to the Swarm master. |
-| VpcAvailabilityZones | Comma-delimited list of three VPC availability zones in which to create subnets. |
+| SwarmClusterSize | Number of nodes in the Swarm cluster (3-12). The Actual size of the cluster is (SwarmClusterSize + 1) 
+due to additional ADOP reverse proxy node created in the swarm cluster.|
+| OuterProxyClusterSize | Number of nodes in the Outer Proxy cluster (1-12). |
+| SwarmDiscoveryURL | A unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new?size=5 |
+| WhitelistAddress | The net block (CIDR) from which SSH to the proxy, swarm nodes and NAT instances is available. 
+The public load balancer access is also restricted to same CIDR block. By default (0.0.0.0/0) allows access from everywhere. |
+| KeyName | The name of an EC2 Key Pair to allow SSH access to the ec2 instances in the stack. |
+| VpcAvailabilityZones | Comma-delimited list of three VPC availability zones in which to create subnets. This would work in the region with three AZ's.|
 
 The template builds a new VPC with 3 subnets (in 3 availability zones) for proxy, 3 subnets (in 3 availability zones) for public ELB 
 and  3 subnets (in 3 availability zones) for a single Swarm master, a cluster of between 3 and 12 nodes and
@@ -50,8 +51,8 @@ alternative cluster manager.
 | Output | Description |
 |--------|-------------|
 | MasterDockerPs | Command to run a 'docker ps' on the Swarm master |
-| ADOPReverseProxyPrivateIP | ADOP reverse proxy private IP to access stack |
-| ELBPublicDNSName | ELB DNS to access the ADOP stack |
+| ELBPublicDNSName | Public URL to access the ADOP stack |
+| ADOPReverseProxy | Private URL to access the ADOP stack |
 
 ## Testing
 

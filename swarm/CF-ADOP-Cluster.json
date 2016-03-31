@@ -130,10 +130,10 @@
     },
     "SwarmClusterSize": {
       "Type": "Number",
-      "Default": "3",
-      "MinValue": "3",
+      "Default": "4",
+      "MinValue": "4",
       "MaxValue": "12",
-      "Description": "Number of nodes in the Swarm cluster (3-12). The Actual size of the cluster is (SwarmClusterSize + 1) due to additional ADOP reverse proxy node created in the swarm cluster."
+      "Description": "Number of nodes in the Swarm cluster (4-12). The Actual size of the cluster is (SwarmClusterSize + 1) due to additional ADOP reverse proxy node created in the swarm cluster."
     },
     "OuterProxyClusterSize": {
       "Type": "Number",
@@ -160,6 +160,11 @@
     "VpcAvailabilityZones": {
       "Type": "List<AWS::EC2::AvailabilityZone::Name>",
       "Description": "Comma-delimited list of three VPC availability zones in which nodes are created. This would work in the region with three AZ's.",
+      "Default": ""
+    },
+    "SSLCertificateARN": {
+      "Type": "String",
+      "Description": "ARN for SSL certificate to be used for ELB.",
       "Default": ""
     }
   },
@@ -1367,9 +1372,10 @@
         "CrossZone" : "true",
         "Listeners" : [ 
             {
-              "LoadBalancerPort" : "80",
+              "LoadBalancerPort" : "443",
               "InstancePort" : "80",
-              "Protocol" : "HTTP"
+              "Protocol" : "HTTPS",
+              "SSLCertificateId": { "Ref": "SSLCertificateARN" }
             },
             {
               "LoadBalancerPort" : "2375",
@@ -1691,7 +1697,7 @@
         "LaunchConfigurationName": {
           "Ref": "SwarmServerLc"
         },
-        "MinSize": "3",
+        "MinSize": "4",
         "MaxSize": "12",
         "DesiredCapacity": {
           "Ref": "SwarmClusterSize"
@@ -1901,7 +1907,7 @@
     },
     "ELBPublicDNSName": {
       "Description": "Public URL to access the ADOP Stack",
-      "Value": { "Fn::Join": [ "", [ "http://" , { "Fn::GetAtt": [ "ProxyElasticLoadBalancer", "DNSName" ] } ] ] }
+      "Value": { "Fn::Join": [ "", [ "https://" , { "Fn::GetAtt": [ "ProxyElasticLoadBalancer", "DNSName" ] } ] ] }
     },
     "ADOPReverseProxy": {
       "Description": "Private URL to access the ADOP Proxy",

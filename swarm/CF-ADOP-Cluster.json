@@ -92,7 +92,6 @@
       "Type": "String",
       "Description": "Swarm Node EC2 HVM instance type (t2.small, m3.medium, etc).",
       "AllowedValues": [
-        "t2.small",
         "t2.medium",
         "t2.large",
         "m4.large",
@@ -106,7 +105,7 @@
         "m3.2xlarge"
       ],
       "ConstraintDescription": "Must be a valid EC2 HVM instance type.",
-      "Default": "t2.small"
+      "Default": "t2.medium"
     },
     "NATInstanceType": {
       "Type": "String",
@@ -130,10 +129,10 @@
     },
     "SwarmClusterSize": {
       "Type": "Number",
-      "Default": "4",
-      "MinValue": "4",
+      "Default": "3",
+      "MinValue": "3",
       "MaxValue": "12",
-      "Description": "Number of nodes in the Swarm cluster (4-12). The Actual size of the cluster is (SwarmClusterSize + 1) due to additional ADOP reverse proxy node created in the swarm cluster."
+      "Description": "Number of nodes in the Swarm cluster (3-12). The Actual size of the cluster is (SwarmClusterSize + 1) due to additional ADOP reverse proxy node created in the swarm cluster."
     },
     "OuterProxyClusterSize": {
       "Type": "Number",
@@ -676,8 +675,8 @@
         "SecurityGroupIngress": [
           {
             "IpProtocol": "tcp",
-            "FromPort": "80",
-            "ToPort": "80",
+            "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": {
               "Ref": "WhitelistAddress"
             }
@@ -1697,7 +1696,7 @@
         "LaunchConfigurationName": {
           "Ref": "SwarmServerLc"
         },
-        "MinSize": "4",
+        "MinSize": "3",
         "MaxSize": "12",
         "DesiredCapacity": {
           "Ref": "SwarmClusterSize"
@@ -1865,7 +1864,7 @@
         "ImageId": {
           "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "CENTOSAMI" ]
         },
-        "InstanceType": "t2.small",
+        "InstanceType": "t2.medium",
         "AssociatePublicIpAddress": true,
         "KeyName": { "Ref": "KeyName" },
         "SecurityGroups": [ {

@@ -688,6 +688,24 @@
             "CidrIp": {
               "Ref": "WhitelistAddress"
             }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": { "Fn::Join": [ "", [ { "Fn::GetAtt": [ "NATInstanceAz1", "PublicIp" ] }, "/32"  ] ] }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": { "Fn::Join": [ "", [ { "Fn::GetAtt": [ "NATInstanceAz2", "PublicIp" ] }, "/32"  ] ] }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": { "Fn::Join": [ "", [ { "Fn::GetAtt": [ "NATInstanceAz3", "PublicIp" ] }, "/32"  ] ] }
           }
         ],
         "Tags": [

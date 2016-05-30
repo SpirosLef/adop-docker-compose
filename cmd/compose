@@ -307,7 +307,7 @@ fi
 
 # Setting Compose File Lists
 ADOPFILEOPTS="-f ${CLI_DIR}/docker-compose.yml -f ${CLI_DIR}/etc/volumes/${VOLUME_DRIVER}/default.yml -f ${CLI_DIR}/etc/logging/${LOGGING_DRIVER}/default.yml"
-ELKFILEOPTS="-f ${CLI_DIR}/compose/elk.yml"
+ELKFILEOPTS="-f ${CLI_DIR}/compose/elk.yml -f ${CLI_DIR}/compose/hygieia.yml"
 
 case ${SUBCOMMAND_OPT} in
     "cmd_desc"|"help"|"init")

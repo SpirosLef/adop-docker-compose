@@ -1,0 +1,149 @@
+mongodb:
+  image: sachin28/adop-hygieia-mongo:0.0.2
+  container_name: hygieia-mongodb
+  command: mongod --smallfiles
+  net: ${CUSTOM_NETWORK_NAME}
+  expose:
+  - "27017"
+#  volumes:
+#  - hygieia-mongo:/data/db:rw
+  environment:
+  - HYGIEIA_DB=dashboard
+  - HYGIEIA_DB_USER=hygieia
+  - HYGIEIA_DB_PASS=hygieia
+hygieia-api:
+  image: capitaloneio/hygieia-api:latest
+  container_name: hygieia-api
+  net: ${CUSTOM_NETWORK_NAME}
+  expose:
+  - "8080"
+  environment:
+  - SPRING_DATA_MONGODB_HOST=hygieia-mongodb
+  - SPRING_DATA_MONGODB_PORT=27017
+  - SPRING_DATA_MONGODB_USERNAME=hygieia
+  - SPRING_DATA_MONGODB_PASSWORD=hygieia
+hygieia-ui:
+  image: capitaloneio/hygieia-ui:latest
+  container_name: hygieia-ui
+  net: ${CUSTOM_NETWORK_NAME}
+  ports:
+  - "8088:80"
+  environment:
+  - API_HOST=hygieia-api
+  - API_PORT=8080
+
+
+#hygieia-github-scm-collector:
+#  image: capitalone/hygieia-github-scm-collector:latest
+#  container_name: hygieia-github
+#  net: ${CUSTOM_NETWORK_NAME}
+# place any values you want to change in docker-compose.override.yml
+#  environment:
+#  - GITHUB_HOST=github.com
+#  - GITHUB_CRON='0 0/5 * * * *'
+#  - GITHUB_COMMIT_THREASHOLD_DAYS=15
+
+
+
+hygieia-jenkins-build-collector:
+  image: capitalone/hygieia-jenkins-build-collector:latest
+  container_name: hygieia-jenkins-build
+  net: ${CUSTOM_NETWORK_NAME}
+  environment:
+##Jenkins server (required) - Can provide multiple
+  - JENKINS_MASTER=${PROTO}://${TARGET_HOST}/jenkins/
+##If using username/token for api authentication (required for Cloudbees Jenkins Ops Center) see sample
+##  - JENKINS_OP_CENTER=${PROTO}://${INITIAL_ADMIN_USER}:${INITIAL_ADMIN_PASSWORD_PLAIN}@${TARGET_HOST}/jenkins/
+  - HYGIEIA_API_ENV_SPRING_DATA_MONGODB_USERNAME=hygieia
+  - HYGIEIA_API_ENV_SPRING_DATA_MONGODB_PASSWORD=hygieia
+  - MONGO_PORT=tcp://hygieia-mongodb:27017
+##Another option: If using same username/password Jenkins auth - set username/apiKey to use HTTP Basic Auth (blank=no auth)
+  - JENKINS_USERNAME=${INITIAL_ADMIN_USER}
+  - JENKINS_API_KEY=${INITIAL_ADMIN_PASSWORD_PLAIN}
+##  - JENKINS_CRON=0 0/5 * * * *
+##Determines if build console log is collected - defaults to false
+##  - JENKINS_SAVE_LOG=true
+#
+#hygieia-jenkins-cucumber-test-collector:
+#  image: capitalone/hygieia-jenkins-cucumber-test-collector:latest
+#  container_name: hygieia-jenkins-cucumber
+#  net: local_network
+#  volumes:
+#  - ./logs:/hygieia/logs
+#  links:
+#  - mongodb:mongo
+#  - hygieia-api
+##  environment:
+##Jenkins server (required) - Can provide multiple
+##  - JENKINS_MASTER=ttp://jenkins.company.com
+##If using username/token for api authentication (required for Cloudbees Jenkins Ops Center) see sample
+##  - JENKINS_OP_CENTER=http://username:token@jenkins.company.com
+##Another option: If using same username/password Jenkins auth - set username/apiKey to use HTTP Basic Auth (blank=no auth)
+##  - JENKINS_USERNAME
+##  - JENKINS_API_KEY
+##  - JENKINS_CRON=0 0/5 * * * *
+##Determines if build console log is collected - defaults to false
+##  - JENKINS_SAVE_LOG=true
+#
+hygieia-sonar-codequality-collector:
+  image: capitalone/hygieia-sonar-codequality-collector:latest
+  container_name: hygieia-sonar-codequality
+  net: local_network
+  environment:
+  - SONAR_CRON=* * * * * *
+  - SONAR_URL=http://${INITIAL_ADMIN_USER}:${INITIAL_ADMIN_PASSWORD_PLAIN}@sonar:9000
+  - HYGIEIA_API_ENV_SPRING_DATA_MONGODB_USERNAME=hygieia
+  - HYGIEIA_API_ENV_SPRING_DATA_MONGODB_PASSWORD=hygieia
+  - MONGO_PORT=tcp://hygieia-mongodb:27017
+
+#hygieia-chat-ops-collector:
+#  image: capitalone/hygieia-chat-ops-collector:latest
+#  container_name: hygieia-chat-ops
+#  net: local_network
+#  volumes:
+#  - ./logs:/hygieia/logs
+#  links:
+#  - mongodb:mongo
+#  - hygieia-api
+##  environment:
+##  - CHATOPS_CRON=0 0/5 * * * *
+#
+#hygieia-subversion-scm-collector:
+#  image: capitalone/hygieia-subversion-scm-collector:latest
+#  container_name: hygieia-subversion
+#  net: local_network
+#  volumes:
+#  - ./logs:/hygieia/logs
+#  links:
+#  - mongodb:mongo
+#  - hygieia-api
+##  environment:
+##  - SUBVERSION_CRON:-0 0/5 * * * *
+#
+##Shared subversion username and password
+##  - SUBVERSION_USERNAME=
+##  - SUBVERSION_PASSWORD=
+#
+##Maximum number of days to go back in time when fetching commits
+##  - SUBVERSION_COMMIT_THRESHOLD_DAYS=15
+#
+#hygieia-stash-scm-collector:
+#  image: capitalone/hygieia-stash-scm-collector:latest
+#  container_name: hygieia-stash
+#  net: local_network
+#  volumes:
+#  - ./logs:/hygieia/logs
+#  links:
+#  - mongodb:mongo
+#  - hygieia-api
+##  environment:
+#    #mandatory
+##  - STASH_HOST=mystashrepo.com/
+##  - STASH_API=/rest/api/1.0/
+#
+##  - STASH_CRON:-0 0/5 * * * *
+#
+##Maximum number of days to go back in time when fetching commits
+##  - STASH_COMMIT_THRESHOLD_DAYS=15
+#
+#
